@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:4200")
+@CrossOrigin(origins = {"http://localhost:4200", "http://127.0.0.1:4200"})
 @RestController
 @RequestMapping("/api/narsa")
 @RequiredArgsConstructor
@@ -53,6 +53,17 @@ public class NarsaController {
         return ResponseEntity.ok(comparisonResultRepository.findAll());
     }
 
+    @GetMapping("/stats")
+    public ResponseEntity<DashboardStats> getStats() {
+        return ResponseEntity.ok(new DashboardStats(
+                vehicleNarsaRepository.count(),
+                vehicleSageRepository.count(),
+                comparisonResultRepository.countByStatus("MATCH"),
+                comparisonResultRepository.countByStatus("ABSENT_IN_SAGE"),
+                comparisonResultRepository.countByStatus("ABSENT_IN_NARSA")
+        ));
+    }
+
     @DeleteMapping("/reset")
     public ResponseEntity<String> resetData() {
         comparisonResultRepository.deleteAll();
@@ -60,5 +71,14 @@ public class NarsaController {
         vehicleSageRepository.deleteAll();
 
         return ResponseEntity.ok("Données supprimées avec succès");
+    }
+
+    public record DashboardStats(
+            long totalNarsaVehicles,
+            long totalSageVehicles,
+            long matchCount,
+            long absentInSageCount,
+            long absentInNarsaCount
+    ) {
     }
 }
