@@ -2,10 +2,10 @@ package jbel.annour.vehiclereconciliation.service;
 
 import jbel.annour.vehiclereconciliation.entity.*;
 import jbel.annour.vehiclereconciliation.repository.*;
+import jbel.annour.vehiclereconciliation.vehicle.VehicleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 import jakarta.transaction.Transactional;
 import java.util.List;
 import java.util.Set;
@@ -18,6 +18,7 @@ public class ComparisonService {
     private final VehicleNarsaRepository narsaRepository;
     private final VehicleSageRepository sageRepository;
     private final ComparisonResultRepository resultRepository;
+    private final VehicleService vehicleService;
 
     @Transactional
     public void compareVehicles() {
@@ -29,13 +30,19 @@ public class ComparisonService {
 
         Set<String> sageMatricules = sageVehicles.stream()
                 .map(VehicleSage::getNormalizedMatricule)
+                .filter(matricule -> matricule != null && !matricule.isBlank())
                 .collect(Collectors.toSet());
 
         Set<String> narsaMatricules = narsaVehicles.stream()
                 .map(VehicleNarsa::getNormalizedMatricule)
+                .filter(matricule -> matricule != null && !matricule.isBlank())
                 .collect(Collectors.toSet());
 
         for (VehicleNarsa narsa : narsaVehicles) {
+            if (narsa.getNormalizedMatricule() == null || narsa.getNormalizedMatricule().isBlank()) {
+                continue;
+            }
+
             ComparisonResult result = new ComparisonResult();
             result.setMatricule(narsa.getNoImmatriculation());
 
@@ -51,6 +58,10 @@ public class ComparisonService {
         }
 
         for (VehicleSage sage : sageVehicles) {
+            if (sage.getNormalizedMatricule() == null || sage.getNormalizedMatricule().isBlank()) {
+                continue;
+            }
+
             if (!narsaMatricules.contains(sage.getNormalizedMatricule())) {
                 ComparisonResult result = new ComparisonResult();
                 result.setMatricule(sage.getNoImmatriculation());
@@ -59,5 +70,7 @@ public class ComparisonService {
                 resultRepository.save(result);
             }
         }
+
+        vehicleService.syncVehiclesFromReconciliation();
     }
 }

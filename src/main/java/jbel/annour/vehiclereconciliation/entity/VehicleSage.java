@@ -15,6 +15,7 @@ public class VehicleSage {
 
     private String noImmatriculation;
     private String normalizedMatricule;
+    private String sageCode;
 
     private String marque;
     private String modele;
