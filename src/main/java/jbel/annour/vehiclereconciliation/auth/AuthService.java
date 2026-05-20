@@ -27,7 +27,8 @@ public class AuthService {
         user.setFullName(request.fullName());
         user.setEmail(request.email());
         user.setPassword(passwordEncoder.encode(request.password()));
-        user.setRole(normalizeRole(request.role()));
+        user.setRole(resolveRegistrationRole(request.role()));
+        user.setActive(true);
 
         userRepository.save(user);
         return buildResponse(user);
@@ -48,7 +49,7 @@ public class AuthService {
                 jwtService.generateToken(user),
                 user.getFullName(),
                 user.getEmail(),
-                user.getRole()
+                user.normalizedRole()
         );
     }
 
@@ -58,5 +59,13 @@ public class AuthService {
         }
 
         return role.replace("ROLE_", "").trim().toUpperCase();
+    }
+
+    private String resolveRegistrationRole(String requestedRole) {
+        if (userRepository.count() == 0) {
+            return normalizeRole(requestedRole);
+        }
+
+        return "USER";
     }
 }
