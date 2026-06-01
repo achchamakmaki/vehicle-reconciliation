@@ -1,5 +1,6 @@
 package jbel.annour.vehiclereconciliation.vehicle;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -21,13 +22,24 @@ import java.util.List;
 public class VehicleController {
 
     private final VehicleService vehicleService;
+    private final SageX3VehicleService sageX3VehicleService;
 
     @GetMapping
     public ResponseEntity<List<Vehicle>> findAll() {
         return ResponseEntity.ok(vehicleService.findAll());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/sage-x3")
+    public ResponseEntity<List<Vehicle>> findSageX3Vehicles() {
+        return ResponseEntity.ok(sageX3VehicleService.fetchVehicleList());
+    }
+
+    @GetMapping("/sage-x3/raw")
+    public ResponseEntity<JsonNode> findSageX3VehiclesRaw() {
+        return ResponseEntity.ok(sageX3VehicleService.fetchVehicles());
+    }
+
+    @GetMapping("/{id:[0-9]+}")
     public ResponseEntity<Vehicle> findById(@PathVariable Long id) {
         return ResponseEntity.ok(vehicleService.findById(id));
     }
