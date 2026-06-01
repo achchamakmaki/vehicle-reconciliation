@@ -3,6 +3,7 @@ package jbel.annour.vehiclereconciliation.vehicle;
 import jbel.annour.vehiclereconciliation.entity.ComparisonResult;
 import jbel.annour.vehiclereconciliation.entity.VehicleNarsa;
 import jbel.annour.vehiclereconciliation.entity.VehicleSage;
+import jbel.annour.vehiclereconciliation.infraction.InfractionService;
 import jbel.annour.vehiclereconciliation.repository.ComparisonResultRepository;
 import jbel.annour.vehiclereconciliation.repository.VehicleNarsaRepository;
 import jbel.annour.vehiclereconciliation.repository.VehicleSageRepository;
@@ -21,6 +22,7 @@ public class VehicleService {
     private final ComparisonResultRepository comparisonResultRepository;
     private final VehicleNarsaRepository vehicleNarsaRepository;
     private final VehicleSageRepository vehicleSageRepository;
+    private final InfractionService infractionService;
 
     @Transactional
     public List<Vehicle> findAll() {
@@ -37,7 +39,9 @@ public class VehicleService {
     public Vehicle create(Vehicle vehicle) {
         vehicle.setId(null);
         vehicle.setNormalizedMatricule(normalizeMatricule(vehicle.getMatricule()));
-        return createOrUpdateManualVehicle(vehicle);
+        Vehicle savedVehicle = createOrUpdateManualVehicle(vehicle);
+        infractionService.relinkInfractionsForVehicle(savedVehicle);
+        return savedVehicle;
     }
 
     @Transactional
@@ -51,7 +55,9 @@ public class VehicleService {
         existingVehicle.setType(vehicle.getType());
         existingVehicle.setStatus(vehicle.getStatus());
         existingVehicle.setSource(firstNonBlank(vehicle.getSource(), existingVehicle.getSource(), "MANUAL"));
-        return vehicleRepository.save(existingVehicle);
+        Vehicle savedVehicle = vehicleRepository.save(existingVehicle);
+        infractionService.relinkInfractionsForVehicle(savedVehicle);
+        return savedVehicle;
     }
 
     @Transactional
@@ -126,7 +132,9 @@ public class VehicleService {
         existingVehicle.setStatus(vehicle.getStatus());
         existingVehicle.setSource(vehicle.getSource());
 
-        return vehicleRepository.save(existingVehicle);
+        Vehicle savedVehicle = vehicleRepository.save(existingVehicle);
+        infractionService.relinkInfractionsForVehicle(savedVehicle);
+        return savedVehicle;
     }
 
     private Vehicle createOrUpdateManualVehicle(Vehicle vehicle) {
@@ -147,7 +155,9 @@ public class VehicleService {
         existingVehicle.setStatus(firstNonBlank(vehicle.getStatus(), "CONFORME"));
         existingVehicle.setSource(firstNonBlank(vehicle.getSource(), "MANUAL"));
 
-        return vehicleRepository.save(existingVehicle);
+        Vehicle savedVehicle = vehicleRepository.save(existingVehicle);
+        infractionService.relinkInfractionsForVehicle(savedVehicle);
+        return savedVehicle;
     }
 
     private Vehicle buildVehicleFromComparison(
