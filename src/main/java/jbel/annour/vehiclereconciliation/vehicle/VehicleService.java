@@ -6,12 +6,12 @@ import jbel.annour.vehiclereconciliation.entity.VehicleSage;
 import jbel.annour.vehiclereconciliation.repository.ComparisonResultRepository;
 import jbel.annour.vehiclereconciliation.repository.VehicleNarsaRepository;
 import jbel.annour.vehiclereconciliation.repository.VehicleSageRepository;
+import jbel.annour.vehiclereconciliation.util.MatriculeUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +22,9 @@ public class VehicleService {
     private final VehicleNarsaRepository vehicleNarsaRepository;
     private final VehicleSageRepository vehicleSageRepository;
 
+    @Transactional
     public List<Vehicle> findAll() {
+        syncSageDetailsFromSage();
         return vehicleRepository.findAll();
     }
 
@@ -34,7 +36,8 @@ public class VehicleService {
     @Transactional
     public Vehicle create(Vehicle vehicle) {
         vehicle.setId(null);
-        return createOrUpdateVehicle(vehicle);
+        vehicle.setNormalizedMatricule(normalizeMatricule(vehicle.getMatricule()));
+        return createOrUpdateManualVehicle(vehicle);
     }
 
     @Transactional
@@ -42,18 +45,20 @@ public class VehicleService {
         Vehicle existingVehicle = findById(id);
         existingVehicle.setMatricule(vehicle.getMatricule());
         existingVehicle.setNormalizedMatricule(normalizeMatricule(vehicle.getMatricule()));
+        existingVehicle.setSageCode(vehicle.getSageCode());
         existingVehicle.setMarque(vehicle.getMarque());
         existingVehicle.setModele(vehicle.getModele());
         existingVehicle.setType(vehicle.getType());
         existingVehicle.setStatus(vehicle.getStatus());
-        existingVehicle.setSageReference(vehicle.getSageReference());
-        existingVehicle.setNarsaReference(vehicle.getNarsaReference());
+        existingVehicle.setSource(firstNonBlank(vehicle.getSource(), existingVehicle.getSource(), "MANUAL"));
         return vehicleRepository.save(existingVehicle);
     }
 
     @Transactional
     public void delete(Long id) {
-        vehicleRepository.deleteById(id);
+        if (vehicleRepository.existsById(id)) {
+            vehicleRepository.deleteById(id);
+        }
     }
 
     @Transactional
@@ -75,13 +80,36 @@ public class VehicleService {
                             .orElse(null);
 
                     Vehicle vehicle = buildVehicleFromComparison(result, narsa, sage, normalizedMatricule);
-                    createOrUpdateVehicle(vehicle);
+                    createOrUpdateVehicleFromReconciliation(vehicle);
                 });
+
+        syncSageDetailsFromSage();
     }
 
     @Transactional
-    public Vehicle createOrUpdateVehicle(Vehicle vehicle) {
-        String normalizedMatricule = normalizeMatricule(vehicle.getMatricule());
+    public void syncSageDetailsFromSage() {
+        vehicleSageRepository.findAll().forEach(sage -> {
+            if (sage.getNormalizedMatricule() == null || sage.getNormalizedMatricule().isBlank()) {
+                return;
+            }
+
+            vehicleRepository.findByNormalizedMatricule(sage.getNormalizedMatricule())
+                    .ifPresent(vehicle -> {
+                        vehicle.setSageCode(sage.getSageCode());
+                        vehicle.setMarque(sage.getMarque());
+                        vehicle.setModele(sage.getModele());
+
+                        if (vehicle.getMatricule() == null || vehicle.getMatricule().isBlank()) {
+                            vehicle.setMatricule(sage.getNoImmatriculation());
+                        }
+
+                        vehicleRepository.save(vehicle);
+                    });
+        });
+    }
+
+    private Vehicle createOrUpdateVehicleFromReconciliation(Vehicle vehicle) {
+        String normalizedMatricule = vehicle.getNormalizedMatricule();
         if (normalizedMatricule.isBlank()) {
             throw new IllegalArgumentException("Matricule obligatoire");
         }
@@ -89,14 +117,35 @@ public class VehicleService {
         Vehicle existingVehicle = vehicleRepository.findByNormalizedMatricule(normalizedMatricule)
                 .orElseGet(Vehicle::new);
 
-        existingVehicle.setMatricule(firstNonBlank(vehicle.getMatricule(), existingVehicle.getMatricule()));
+        existingVehicle.setMatricule(vehicle.getMatricule());
         existingVehicle.setNormalizedMatricule(normalizedMatricule);
-        existingVehicle.setMarque(firstNonBlank(vehicle.getMarque(), existingVehicle.getMarque()));
-        existingVehicle.setModele(firstNonBlank(vehicle.getModele(), existingVehicle.getModele()));
-        existingVehicle.setType(firstNonBlank(vehicle.getType(), existingVehicle.getType()));
-        existingVehicle.setStatus(firstNonBlank(vehicle.getStatus(), existingVehicle.getStatus()));
-        existingVehicle.setSageReference(firstNonBlank(vehicle.getSageReference(), existingVehicle.getSageReference()));
-        existingVehicle.setNarsaReference(firstNonBlank(vehicle.getNarsaReference(), existingVehicle.getNarsaReference()));
+        existingVehicle.setSageCode(vehicle.getSageCode());
+        existingVehicle.setMarque(firstNonBlank(vehicle.getMarque(), "N/A"));
+        existingVehicle.setModele(firstNonBlank(vehicle.getModele(), "N/A"));
+        existingVehicle.setType(vehicle.getType());
+        existingVehicle.setStatus(vehicle.getStatus());
+        existingVehicle.setSource(vehicle.getSource());
+
+        return vehicleRepository.save(existingVehicle);
+    }
+
+    private Vehicle createOrUpdateManualVehicle(Vehicle vehicle) {
+        String normalizedMatricule = vehicle.getNormalizedMatricule();
+        if (normalizedMatricule == null || normalizedMatricule.isBlank()) {
+            throw new IllegalArgumentException("Matricule obligatoire");
+        }
+
+        Vehicle existingVehicle = vehicleRepository.findByNormalizedMatricule(normalizedMatricule)
+                .orElseGet(Vehicle::new);
+
+        existingVehicle.setMatricule(vehicle.getMatricule());
+        existingVehicle.setNormalizedMatricule(normalizedMatricule);
+        existingVehicle.setSageCode(vehicle.getSageCode());
+        existingVehicle.setMarque(vehicle.getMarque());
+        existingVehicle.setModele(vehicle.getModele());
+        existingVehicle.setType(vehicle.getType());
+        existingVehicle.setStatus(firstNonBlank(vehicle.getStatus(), "CONFORME"));
+        existingVehicle.setSource(firstNonBlank(vehicle.getSource(), "MANUAL"));
 
         return vehicleRepository.save(existingVehicle);
     }
@@ -110,11 +159,11 @@ public class VehicleService {
         Vehicle vehicle = new Vehicle();
         vehicle.setMatricule(firstNonBlank(result.getMatricule(), narsaMatricule(narsa), sageMatricule(sage)));
         vehicle.setNormalizedMatricule(normalizedMatricule);
-        vehicle.setMarque(sage != null ? sage.getMarque() : null);
-        vehicle.setModele(sage != null ? sage.getModele() : null);
+        vehicle.setSageCode(sage != null ? sage.getSageCode() : null);
+        vehicle.setMarque(sage != null ? firstNonBlank(sage.getMarque(), "N/A") : "N/A");
+        vehicle.setModele(sage != null ? firstNonBlank(sage.getModele(), "N/A") : "N/A");
         vehicle.setStatus(toVehicleStatus(result.getStatus()));
-        vehicle.setSageReference(sage != null ? firstNonBlank(sage.getSageCode(), sage.getNoImmatriculation()) : null);
-        vehicle.setNarsaReference(narsa != null ? narsa.getNoImmatriculation() : null);
+        vehicle.setSource(resolveSource(narsa, sage));
         return vehicle;
     }
 
@@ -127,11 +176,8 @@ public class VehicleService {
     }
 
     private String normalizeMatricule(String matricule) {
-        if (matricule == null) {
-            return "";
-        }
-
-        return matricule.replaceAll("[^A-Za-z0-9]", "").toUpperCase();
+        String normalizedMatricule = MatriculeUtils.normalize(matricule);
+        return normalizedMatricule != null ? normalizedMatricule : "";
     }
 
     private String narsaMatricule(VehicleNarsa narsa) {
@@ -144,11 +190,23 @@ public class VehicleService {
 
     private String firstNonBlank(String... values) {
         for (String value : values) {
-            if (Objects.nonNull(value) && !value.isBlank()) {
+            if (value != null && !value.isBlank()) {
                 return value;
             }
         }
 
         return null;
+    }
+
+    private String resolveSource(VehicleNarsa narsa, VehicleSage sage) {
+        if (narsa != null && sage != null) {
+            return "NARSA_SAGE";
+        }
+
+        if (narsa != null) {
+            return "NARSA";
+        }
+
+        return "SAGE";
     }
 }

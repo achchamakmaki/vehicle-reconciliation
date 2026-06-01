@@ -44,9 +44,9 @@ public class SageImportService {
             );
             int lettreColumn = resolveColumn(columns, 2, "lettre");
             int prefectureColumn = resolveColumn(columns, 3, "prefecture", "ville", "code prefecture");
-            int marqueColumn = optionalColumn(columns, "marque");
-            int modeleColumn = optionalColumn(columns, "modele");
-            int statutColumn = optionalColumn(columns, "statut");
+            int marqueColumn = optionalColumn(columns, "marque", "brand", "constructeur");
+            int modeleColumn = optionalColumn(columns, "modele", "model", "version");
+            int statutColumn = optionalColumn(columns, "statut", "status", "etat");
 
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
@@ -114,8 +114,23 @@ public class SageImportService {
         return fallbackIndex;
     }
 
-    private int optionalColumn(Map<String, Integer> columns, String name) {
-        return columns.getOrDefault(normalizeHeader(name), -1);
+    private int optionalColumn(Map<String, Integer> columns, String... names) {
+        for (String name : names) {
+            Integer index = columns.get(normalizeHeader(name));
+            if (index != null) {
+                return index;
+            }
+        }
+
+        for (Map.Entry<String, Integer> column : columns.entrySet()) {
+            for (String name : names) {
+                if (containsAllTokens(column.getKey(), normalizeHeader(name))) {
+                    return column.getValue();
+                }
+            }
+        }
+
+        return -1;
     }
 
     private String cellValue(Row row, int column, DataFormatter formatter) {

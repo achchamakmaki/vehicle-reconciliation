@@ -24,12 +24,12 @@ public class Vehicle {
     private String matricule;
     @Column(unique = true)
     private String normalizedMatricule;
+    private String sageCode;
     private String marque;
     private String modele;
     private String type;
     private String status;
-    private String sageReference;
-    private String narsaReference;
+    private String source;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
