@@ -28,5 +28,13 @@ public class FuelConsumption {
     private BigDecimal liters;
     private BigDecimal amount;
     private String receiptPhotoPath;
+    private String receiptPhotoUrl;
+    private String status;
+    private String source;
     private String notes;
+    private String invoiceNumber;
+    private String product;
+    private String paymentMethod;
+    private String fuelTime;
+    private BigDecimal unitPrice;
 }

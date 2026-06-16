@@ -5,6 +5,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 public interface FuelConsumptionRepository extends JpaRepository<FuelConsumption, Long> {
 
@@ -16,4 +17,6 @@ public interface FuelConsumptionRepository extends JpaRepository<FuelConsumption
 
     @Query("select count(f) from FuelConsumption f where f.liters is null or f.amount is null or f.liters <= 0 or f.amount <= 0")
     long countAnomalies();
+
+    List<FuelConsumption> findTop5ByOrderByIdDesc();
 }

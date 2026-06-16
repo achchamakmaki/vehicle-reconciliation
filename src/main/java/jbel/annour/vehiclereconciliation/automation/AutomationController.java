@@ -26,8 +26,8 @@ public class AutomationController {
     }
 
     @PostMapping("/webhooks/fuel-consumption")
-    public ResponseEntity<AutomationLog> fuelConsumptionWebhook(@RequestBody Map<String, Object> payload) {
-        return ResponseEntity.ok(automationService.createLog("FUEL_CONSUMPTION", payload));
+    public ResponseEntity<Map<String, Object>> fuelConsumptionWebhook(@RequestBody Map<String, Object> payload) {
+        return ResponseEntity.ok(automationService.createFuelConsumptionFromWebhook(payload));
     }
 
     @PostMapping("/webhooks/infraction")
