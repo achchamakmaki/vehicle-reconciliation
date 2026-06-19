@@ -15,23 +15,15 @@ import java.net.MalformedURLException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 
 @Service
 @RequiredArgsConstructor
@@ -44,7 +36,7 @@ public class FuelConsumptionService {
     private String fuelReceiptsDir;
 
     public List<FuelConsumption> findAll() {
-        return fuelConsumptionRepository.findAll();
+        return fuelConsumptionRepository.findAllOrderByReceivedAtDesc();
     }
 
     public FuelConsumption findById(Long id) {
@@ -54,6 +46,9 @@ public class FuelConsumptionService {
 
     public FuelConsumption create(FuelConsumption fuelConsumption) {
         fuelConsumption.setId(null);
+        if (fuelConsumption.getReceivedAt() == null) {
+            fuelConsumption.setReceivedAt(LocalDateTime.now());
+        }
         linkVehicle(fuelConsumption);
         return fuelConsumptionRepository.save(fuelConsumption);
     }
@@ -66,6 +61,9 @@ public class FuelConsumptionService {
         existingFuelConsumption.setDriverName(fuelConsumption.getDriverName());
         existingFuelConsumption.setStation(fuelConsumption.getStation());
         existingFuelConsumption.setConsumptionDate(fuelConsumption.getConsumptionDate());
+        if (fuelConsumption.getReceivedAt() != null) {
+            existingFuelConsumption.setReceivedAt(fuelConsumption.getReceivedAt());
+        }
         existingFuelConsumption.setLiters(fuelConsumption.getLiters());
         existingFuelConsumption.setAmount(fuelConsumption.getAmount());
         existingFuelConsumption.setReceiptPhotoPath(fuelConsumption.getReceiptPhotoPath());
@@ -73,12 +71,18 @@ public class FuelConsumptionService {
         existingFuelConsumption.setStatus(fuelConsumption.getStatus());
         existingFuelConsumption.setSource(fuelConsumption.getSource());
         existingFuelConsumption.setNotes(fuelConsumption.getNotes());
+        existingFuelConsumption.setInvoiceNumber(fuelConsumption.getInvoiceNumber());
+        existingFuelConsumption.setProduct(fuelConsumption.getProduct());
+        existingFuelConsumption.setPaymentMethod(fuelConsumption.getPaymentMethod());
+        existingFuelConsumption.setFuelTime(fuelConsumption.getFuelTime());
+        existingFuelConsumption.setUnitPrice(fuelConsumption.getUnitPrice());
         linkVehicle(existingFuelConsumption);
         return fuelConsumptionRepository.save(existingFuelConsumption);
     }
 
     public FuelConsumption createFromWebhook(Map<String, Object> payload) {
         FuelConsumption fuelConsumption = new FuelConsumption();
+        fuelConsumption.setReceivedAt(LocalDateTime.now());
         fuelConsumption.setMatricule(text(payload, "matricule"));
         fuelConsumption.setDriverName(text(payload, "driverName", "chauffeur", "driver"));
         fuelConsumption.setStation(text(payload, "station"));
@@ -153,6 +157,9 @@ public class FuelConsumptionService {
         Files.copy(receipt.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
 
         fuelConsumption.setReceiptPhotoPath(target.toString());
+        if (fuelConsumption.getReceivedAt() == null) {
+            fuelConsumption.setReceivedAt(LocalDateTime.now());
+        }
         return fuelConsumptionRepository.save(fuelConsumption);
     }
 
@@ -272,6 +279,9 @@ public class FuelConsumptionService {
 
         fuel.setReceiptPhotoPath(filePath.toString());
         fuel.setReceiptPhotoUrl("/api/fuel-consumptions/" + id + "/receipt");
+        if (fuel.getReceivedAt() == null) {
+            fuel.setReceivedAt(LocalDateTime.now());
+        }
 
         fuelConsumptionRepository.save(fuel);
     }

@@ -11,6 +11,7 @@ import jakarta.persistence.Table;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Entity
 @Table(name = "fleet_vehicles")
@@ -25,6 +26,8 @@ public class Vehicle {
     @Column(unique = true)
     private String normalizedMatricule;
     private String sageCode;
+    private String numeroChassis;
+    private LocalDate dateAchat;
     private String marque;
     private String modele;
     private String type;

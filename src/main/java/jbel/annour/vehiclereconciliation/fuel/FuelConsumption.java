@@ -9,6 +9,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "fleet_fuel_consumptions")
@@ -25,6 +26,7 @@ public class FuelConsumption {
     private String driverName;
     private String station;
     private LocalDate consumptionDate;
+    private LocalDateTime receivedAt;
     private BigDecimal liters;
     private BigDecimal amount;
     private String receiptPhotoPath;

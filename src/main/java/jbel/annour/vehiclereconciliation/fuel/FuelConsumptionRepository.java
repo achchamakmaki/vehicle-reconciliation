@@ -18,5 +18,9 @@ public interface FuelConsumptionRepository extends JpaRepository<FuelConsumption
     @Query("select count(f) from FuelConsumption f where f.liters is null or f.amount is null or f.liters <= 0 or f.amount <= 0")
     long countAnomalies();
 
-    List<FuelConsumption> findTop5ByOrderByIdDesc();
+    @Query("select f from FuelConsumption f order by case when f.receivedAt is null then 1 else 0 end, f.receivedAt desc, f.id desc")
+    List<FuelConsumption> findAllOrderByReceivedAtDesc();
+
+    @Query(value = "select f from FuelConsumption f order by case when f.receivedAt is null then 1 else 0 end, f.receivedAt desc, f.id desc")
+    List<FuelConsumption> findTop5OrderByReceivedAtDesc(org.springframework.data.domain.Pageable pageable);
 }

@@ -9,6 +9,7 @@ import jbel.annour.vehiclereconciliation.repository.VehicleNarsaRepository;
 import jbel.annour.vehiclereconciliation.repository.VehicleSageRepository;
 import jbel.annour.vehiclereconciliation.util.MatriculeUtils;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class VehicleService {
 
     private final VehicleRepository vehicleRepository;
@@ -27,7 +29,16 @@ public class VehicleService {
     @Transactional
     public List<Vehicle> findAll() {
         syncSageDetailsFromSage();
-        return vehicleRepository.findAll();
+        normalizeStoredVehicleTypes();
+        List<Vehicle> vehicles = vehicleRepository.findAll();
+        vehicles.forEach(vehicle -> log.debug(
+                "Vehicle API payload - id={}, sageCode={}, matricule={}, type={}",
+                vehicle.getId(),
+                vehicle.getSageCode(),
+                vehicle.getMatricule(),
+                vehicle.getType()
+        ));
+        return vehicles;
     }
 
     public Vehicle findById(Long id) {
@@ -50,9 +61,11 @@ public class VehicleService {
         existingVehicle.setMatricule(vehicle.getMatricule());
         existingVehicle.setNormalizedMatricule(normalizeMatricule(vehicle.getMatricule()));
         existingVehicle.setSageCode(vehicle.getSageCode());
+        existingVehicle.setNumeroChassis(vehicle.getNumeroChassis());
+        existingVehicle.setDateAchat(vehicle.getDateAchat());
         existingVehicle.setMarque(vehicle.getMarque());
         existingVehicle.setModele(vehicle.getModele());
-        existingVehicle.setType(vehicle.getType());
+        existingVehicle.setType(VehicleTypeMapper.toBusinessLabel(vehicle.getType()));
         existingVehicle.setStatus(vehicle.getStatus());
         existingVehicle.setSource(firstNonBlank(vehicle.getSource(), existingVehicle.getSource(), "MANUAL"));
         Vehicle savedVehicle = vehicleRepository.save(existingVehicle);
@@ -114,6 +127,24 @@ public class VehicleService {
         });
     }
 
+    @Transactional
+    public void normalizeStoredVehicleTypes() {
+        vehicleRepository.findAll().forEach(vehicle -> {
+            if (VehicleTypeMapper.isSageTypeCode(vehicle.getType())) {
+                String oldType = vehicle.getType();
+                vehicle.setType(VehicleTypeMapper.toBusinessLabel(vehicle.getType()));
+                vehicleRepository.save(vehicle);
+                log.debug(
+                        "Vehicle type normalized in DB - id={}, sageCode={}, oldType={}, newType={}",
+                        vehicle.getId(),
+                        vehicle.getSageCode(),
+                        oldType,
+                        vehicle.getType()
+                );
+            }
+        });
+    }
+
     private Vehicle createOrUpdateVehicleFromReconciliation(Vehicle vehicle) {
         String normalizedMatricule = vehicle.getNormalizedMatricule();
         if (normalizedMatricule.isBlank()) {
@@ -126,9 +157,11 @@ public class VehicleService {
         existingVehicle.setMatricule(vehicle.getMatricule());
         existingVehicle.setNormalizedMatricule(normalizedMatricule);
         existingVehicle.setSageCode(vehicle.getSageCode());
+        existingVehicle.setNumeroChassis(vehicle.getNumeroChassis());
+        existingVehicle.setDateAchat(vehicle.getDateAchat());
         existingVehicle.setMarque(firstNonBlank(vehicle.getMarque(), "N/A"));
         existingVehicle.setModele(firstNonBlank(vehicle.getModele(), "N/A"));
-        existingVehicle.setType(vehicle.getType());
+        existingVehicle.setType(VehicleTypeMapper.toBusinessLabel(vehicle.getType()));
         existingVehicle.setStatus(vehicle.getStatus());
         existingVehicle.setSource(vehicle.getSource());
 
@@ -149,9 +182,11 @@ public class VehicleService {
         existingVehicle.setMatricule(vehicle.getMatricule());
         existingVehicle.setNormalizedMatricule(normalizedMatricule);
         existingVehicle.setSageCode(vehicle.getSageCode());
+        existingVehicle.setNumeroChassis(vehicle.getNumeroChassis());
+        existingVehicle.setDateAchat(vehicle.getDateAchat());
         existingVehicle.setMarque(vehicle.getMarque());
         existingVehicle.setModele(vehicle.getModele());
-        existingVehicle.setType(vehicle.getType());
+        existingVehicle.setType(VehicleTypeMapper.toBusinessLabel(vehicle.getType()));
         existingVehicle.setStatus(firstNonBlank(vehicle.getStatus(), "CONFORME"));
         existingVehicle.setSource(firstNonBlank(vehicle.getSource(), "MANUAL"));
 

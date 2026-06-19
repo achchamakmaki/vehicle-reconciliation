@@ -6,6 +6,7 @@ import jbel.annour.vehiclereconciliation.infraction.InfractionRepository;
 import jbel.annour.vehiclereconciliation.repository.ComparisonResultRepository;
 import jbel.annour.vehiclereconciliation.vehicle.VehicleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -44,6 +45,6 @@ public class DashboardService {
     }
 
     public List<FuelConsumption> getRecentFuelConsumptions() {
-        return fuelConsumptionRepository.findTop5ByOrderByIdDesc();
+        return fuelConsumptionRepository.findTop5OrderByReceivedAtDesc(PageRequest.of(0, 5));
     }
 }

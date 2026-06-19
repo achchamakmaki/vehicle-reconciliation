@@ -9,4 +9,6 @@ public interface VehicleRepository extends JpaRepository<Vehicle, Long> {
     long countByStatusIgnoreCase(String status);
 
     Optional<Vehicle> findByNormalizedMatricule(String normalizedMatricule);
+
+    Optional<Vehicle> findBySageCode(String sageCode);
 }

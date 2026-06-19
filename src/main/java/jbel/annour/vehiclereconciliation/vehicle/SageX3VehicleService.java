@@ -87,7 +87,7 @@ public class SageX3VehicleService {
             vehicle.setMatricule(firstText(item, "matricule", "immatriculation", "noImmatriculation", "numeroEnregistrement", "registration", "REGNUM", "YIMMAT", "YIMM", "YREGNUM"));
             vehicle.setMarque(firstText(item, "marque", "brand", "make", "YMARQUE", "ZMARQUE", "BPRNAM"));
             vehicle.setModele(firstText(item, "modele", "model", "YMODELE", "ZMODELE", "MDL"));
-            vehicle.setType(firstText(item, "type", "genre", "categorie", "YTYP", "YTYPE", "TYP"));
+            vehicle.setType(VehicleTypeMapper.toBusinessLabel(firstText(item, "type", "genre", "categorie", "YTYPE_0", "YTYP", "YTYPE", "TYP")));
             vehicle.setStatus("SAGE_X3");
             vehicle.setSource("SAGE_X3");
 
